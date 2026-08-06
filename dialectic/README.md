@@ -135,11 +135,11 @@ The runnable version is a [Claude Code](https://claude.com/claude-code) skill
 ([`SKILL.md`](./SKILL.md)). **Paste this to Claude Code:**
 
 > Install the dialectic skill:
-> `git clone --single-branch --depth 1 https://github.com/beingcognitive/unprimed-dialectic.git ~/.claude/skills/dialectic`
+> `mkdir -p ~/.claude/skills/dialectic && curl -fsSL https://raw.githubusercontent.com/beingcognitive/skills/main/dialectic/SKILL.md -o ~/.claude/skills/dialectic/SKILL.md`
 
-Then call it with **`/dialectic`** (or "정반합"). Update later with
-`git -C ~/.claude/skills/dialectic pull`. (Already have a `dialectic` skill there? Clone somewhere
-else and copy `SKILL.md` into your skills dir instead.)
+Then call it with **`/dialectic`** (or "정반합"). Re-run the same command to update. (This
+[skills monorepo](https://github.com/beingcognitive/skills) is canonical; the standalone
+`unprimed-dialectic` repo is this skill's pre-monorepo home and is archived.)
 
 It's deliberately heavier than a quick utility — several model calls per round, several rounds — so it
 pays off on genuinely high-stakes convergence, not everyday edits. Reach for it when a single model's
