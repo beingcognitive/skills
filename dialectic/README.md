@@ -134,11 +134,11 @@ with nothing left to answer.
 The runnable version is a [Claude Code](https://claude.com/claude-code) skill
 ([`SKILL.md`](./SKILL.md)). **Paste this to Claude Code:**
 
-> Install the dialectic skill:
-> `mkdir -p ~/.claude/skills/dialectic && curl -fsSL https://raw.githubusercontent.com/beingcognitive/skills/main/dialectic/SKILL.md -o ~/.claude/skills/dialectic/SKILL.md`
+> Install this skill into ~/.claude/skills:
+> https://github.com/beingcognitive/skills/tree/main/dialectic
 
-Then call it with **`/dialectic`** (or "정반합"). Re-run the same command to update — it
-overwrites `SKILL.md` in place, so back yours up first if you've customized it. (This
+Then call it with **`/dialectic`** (or "정반합"). Ask again to update — it overwrites
+`SKILL.md` in place, so back yours up first if you've customized it. (This
 [skills monorepo](https://github.com/beingcognitive/skills) is canonical; the standalone
 `unprimed-dialectic` repo is this skill's pre-monorepo home and is archived.)
 

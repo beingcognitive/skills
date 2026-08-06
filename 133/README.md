@@ -77,9 +77,9 @@ exists.
 The runnable version is a [Claude Code](https://claude.com/claude-code) skill
 ([`SKILL.md`](./SKILL.md)). **Paste this to Claude Code:**
 
-> Install the 133 skill:
-> `mkdir -p ~/.claude/skills/133 && curl -fsSL https://raw.githubusercontent.com/beingcognitive/skills/main/133/SKILL.md -o ~/.claude/skills/133/SKILL.md`
+> Install this skill into ~/.claude/skills:
+> https://github.com/beingcognitive/skills/tree/main/133
 
 Then invoke with **`/133`** (aliases: "1+3+3", "팬아웃 검수") on a release-grade branch.
-Re-run the same command to update — it overwrites `SKILL.md` in place, so back yours up first
-if you've customized it.
+Ask again to update — it overwrites `SKILL.md` in place, so back yours up first if you've
+customized it.

@@ -16,11 +16,11 @@ These are patterns extracted from real daily use — the anecdotes in each write
 
 **Paste this to Claude Code** (swap in the skill you want):
 
-> Install the dialectic skill:
-> `mkdir -p ~/.claude/skills/dialectic && curl -fsSL https://raw.githubusercontent.com/beingcognitive/skills/main/dialectic/SKILL.md -o ~/.claude/skills/dialectic/SKILL.md`
+> Install this skill into ~/.claude/skills:
+> https://github.com/beingcognitive/skills/tree/main/dialectic
 
-Claude Code picks it up as `/dialectic`, `/133`, etc. Re-running the same command updates in
-place (back up first if you've customized). Cloning the repo and copying folders into
+Claude Code picks it up as `/dialectic`, `/133`, etc. Ask again to update — it overwrites in
+place, so back up first if you've customized. Cloning the repo and copying folders into
 `~/.claude/skills/` works too.
 
 Some skills assume tools beyond Claude Code itself (e.g. `133` fans out to the OpenAI Codex CLI
