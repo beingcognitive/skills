@@ -74,10 +74,12 @@ exists.
 
 ## Install
 
-```bash
-mkdir -p ~/.claude/skills/133
-curl -fsSL https://raw.githubusercontent.com/beingcognitive/skills/main/133/SKILL.md \
-  -o ~/.claude/skills/133/SKILL.md
-```
+The runnable version is a [Claude Code](https://claude.com/claude-code) skill
+([`SKILL.md`](./SKILL.md)). **Paste this to Claude Code:**
 
-Then invoke with `/133` (aliases: "1+3+3", "팬아웃 검수") on a release-grade branch.
+> Install the 133 skill:
+> `mkdir -p ~/.claude/skills/133 && curl -fsSL https://raw.githubusercontent.com/beingcognitive/skills/main/133/SKILL.md -o ~/.claude/skills/133/SKILL.md`
+
+Then invoke with **`/133`** (aliases: "1+3+3", "팬아웃 검수") on a release-grade branch.
+Re-run the same command to update — it overwrites `SKILL.md` in place, so back yours up first
+if you've customized it.
