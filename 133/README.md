@@ -3,9 +3,9 @@
 *Your own pass first, then six independent reviewers, before a release-grade change ships.*
 
 **English summary.** `133` is a pre-release review pattern for Claude Code: the main agent
-self-reviews first (the "1"), then fans the identical prompt out to **three Claude Opus subagents
-and three OpenAI Codex CLI runs** (the "3+3") — six reviewers across two model families, each
-blind to the others. Their reports are merged into a finding × reviewer cross-table; the main
+self-reviews first and fixes what it finds (the "1"), then fans the identical prompt out to
+**three Claude Opus subagents and three OpenAI Codex CLI runs** (the "3+3") — six reviewers
+across two model families, each blind to the others. Their reports are merged into a finding × reviewer cross-table; the main
 agent adjudicates every finding (apply / adapt / reject, with reasons), applies the verdicts in
 one batch, and — crucially — sends the *fixes* back for another (smaller) round of review.
 
