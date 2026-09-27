@@ -10,7 +10,7 @@ These are patterns extracted from real daily use — the anecdotes in each write
 | Skill | One line | Language |
 |---|---|---|
 | [`dialectic`](./dialectic/) | Harden a plan/design/decision with independent AI reviewers that don't know what you want — an unprimed thesis→antithesis→synthesis (정반합) loop. | English |
-| [`133`](./133/) | 1+3+3 adversarial review fan-out — self-review first, then 3+3 independent reviewers across two model families, cross-table adjudication. For release-grade changes only. | Korean (English summary) |
+| [`133`](./133/) | 1+3+3 adversarial review fan-out — self-review first, then 3+3 independent reviewers across two model families, cross-table adjudication. For release-grade changes only. | English |
 
 ## Install
 

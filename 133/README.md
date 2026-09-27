@@ -33,7 +33,8 @@ Use it only for changes with real blast radius (store submissions, migrations,
 protocol/contract changes, auth/E2EE). For localized single-surface fixes, a 1–2 reviewer
 mini-check is the default — the full arc is deliberately expensive.
 
-The skill body below is in Korean — it's the version I actually run.
+The skill body is in English (it was originally written and run in Korean; the Korean aliases
+"1+3+3" and "팬아웃 검수" still trigger it).
 
 ## Prerequisites
 
@@ -48,7 +49,7 @@ provider; use the Opus-only reduced variant instead (labeled "single-model — r
 independence").
 
 **Reduced variants** if you lack a piece: without Codex, run Opus ×3 only (label the result
-"single-model — reduced independence"); for small changes, run the 소검증 variant (1–2 reviewers
+"single-model — reduced independence"); for small changes, run the mini-check variant (1–2 reviewers
 on the fix diff only). The self-review phase and the adjudication rules apply unchanged.
 
 ## Relation to [`dialectic`](../dialectic/)

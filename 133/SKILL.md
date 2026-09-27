@@ -1,79 +1,92 @@
 ---
 name: "133"
-version: 1.1.0
-description: 1+3+3 적대 검수 팬아웃 — 메인 에이전트 셀프 리뷰(1) 후 Opus×3 + Codex×3 동일 프롬프트 독립 검수, 교차표 판정·반영. 별칭 "1+3+3", "팬아웃 검수". 릴리스급 변경 전용.
+version: 1.2.0
+description: 1+3+3 adversarial review fan-out — the main agent self-reviews and fixes first (the 1), then Opus×3 + Codex×3 independently review with an identical prompt; findings are adjudicated via a cross-table and applied. Aliases "1+3+3", "팬아웃 검수", "fan-out review". Release-grade changes only.
 ---
 
-# /133 — 1+3+3 적대 검수 팬아웃
+# /133 — 1+3+3 adversarial review fan-out
 
-릴리스급 변경(스토어 배포, 마이그레이션, 프로토콜·계약 변경)을 배포 전에
-메인의 셀프 리뷰 1벌 + 서로 결과를 보지 않는 독립 검수 6벌로 터는 패턴.
-실전에서 반복 확인된 근거: 유니크 실발견이 매번 서로 다른 검수자에게서
-나오고(어느 한 명만 부르면 각기 다른 구멍이 남는다), "실패 시나리오 +
-수정 diff 동봉"을 요구하면 재현 불가 소견이 눈에 띄게 줄어든다(측정치가
-아니라 반복 사용에서의 관찰 — 그래서 단독 발견은 Phase 2에서 직접 실증한다).
+A pattern for shaking down a release-grade change (store release, migration,
+protocol/contract change) before it ships: one self-review by the main agent,
+then six independent reviewers who never see each other's results.
+Evidence from repeated real use: unique true findings keep coming from
+*different* reviewers each time (call any single one and a different hole is
+left open), and demanding "failure scenario + fix diff" makes unreproducible
+findings noticeably rarer (an observation from repeated use, not a
+measurement — which is why single-reviewer findings are reproduced directly in
+Phase 2).
 
-**적용 기준 (심각도 매칭 — 엄수)**: blast radius가 큰 변경(스토어 제출,
-마이그레이션, 프로토콜·계약, E2EE·인증)에만 풀 아크. **UX-국소·단일 표면
-수정은 소검증 1~2벌이 기본값**이다 — 사용자가 명시로 풀 아크를 요청하면
-예외. 검수 시간이 가장 비싼 비용이고, 검수자 수는 발견의 질보다 채택
-압력을 먼저 늘린다.
+**When to use it (severity matching — strict)**: the full arc only for changes
+with a large blast radius (store submissions, migrations, protocols/contracts,
+E2EE/auth). **For UX-local, single-surface fixes, a 1–2 reviewer mini-check is
+the default** — unless the user explicitly asks for the full arc. Review time is
+the most expensive cost, and adding reviewers raises adoption pressure before it
+raises finding quality.
 
-## Phase −1 — 설계 게이트 (구현 전, 3줄)
+## Phase −1 — Design gate (before implementing, 3 lines)
 
-덧대기는 검수가 아니라 구현 전에 태어난다. 릴리스급 수정을 **구현하기 전에**
-세 줄을 쓴다:
+Bolt-ons are born before implementation, not in review. **Before implementing**
+a release-grade fix, write three lines:
 
-1. 문제의 최소 표면 — 어떤 상태/경로가 실제로 아픈가
-2. 빼는 해법 후보 — 코드를 추가하지 않고(또는 기존 초크포인트에 한 줄로)
-   닫을 길이 있는가
-3. 새 기계(상태·리스너·diff·캐시)를 들인다면 — **그 기계가 감시한다고
-   주장하는 사건을 정말 관측할 수 있는가** (실증 사례: 읽음 커서가 데이터
-   행보다 먼저 전진하는 바람에 "안읽음" 전이가 아예 관측되지 않았던 diff
-   정리기 — 결국 기계 전체가 교체됐다)
+1. The minimal surface of the problem — which state/path actually hurts
+2. Subtractive candidates — can this be closed without adding code (or with one
+   line at an existing chokepoint)?
+3. If you introduce new machinery (state, listeners, diffing, caches) — **can
+   that machinery actually observe the event it claims to watch?** (Real case:
+   a diff reconciler whose read cursor advanced before the data rows did, so
+   the "unread" transition was never observable at all — the whole machine was
+   eventually replaced.)
 
-## Phase 0 — 셀프 리뷰 (1)
+## Phase 0 — Self-review (the 1)
 
-팬아웃 전에 메인 에이전트가 먼저 완벽을 시도한다. 검수자들은 두 번째
-그물이지 첫 번째 그물이 아니다.
+Before fanning out, the main agent tries to get it right itself. The reviewers
+are the second net, not the first.
 
-1. 검수 범위 확정: `git diff <기준커밋>..HEAD` — 기준은 이 작업 배치의 시작점.
-2. **주장 검증 감사**: 내가 이번 작업에서 단정한 문장들("X는 원래 정확",
-   "Y는 영향 없음")을 나열하고 각각 코드/전수 grep으로 검증한다. 코드는
-   전수 검증하면서 카피·설정·문서는 표본만 보는 비대칭이 상습 실패 모드다.
-   특히 **카피 수정은 전 표면 grep** — 행 하나 고치고 닫으면 시트·버튼·
-   메일·문서 정본에서 재발한다.
-3. **셀프 리뷰 발견을 팬아웃 전에 전부 수정한다.** 셀프 리뷰는 "보고"가
-   아니라 "수정"으로 끝난다 — 발견 목록만 만들고 그대로 팬아웃하면 6벌이
-   이미 아는 결함을 다시 보고하느라 검수 예산을 태우고, 진짜 두 번째 그물
-   역할을 못 한다.
-   - 각 발견마다: 수정 → 회귀 테스트 추가(가능하면) → 전체 테스트·린트
-     그린 확인 → 커밋("self-review: ..." 요지를 커밋 메시지에).
-   - 지금 고칠 수 없는 것(사용자 결정 필요, 스코프 밖 기존재 결함)만 예외 —
-     "보류 + 사유"로 기록하고 Phase 1 프롬프트의 변경 요약에 "알려진 보류
-     사항"으로 명시한다(검수자가 중복 보고하지 않도록).
-   - 트리 동결은 **팬아웃을 띄우는 순간부터**다. 셀프 리뷰 중·직후는 동결
-     구간이 아니다 — 수정은 여기서 끝낸다.
+1. Fix the review scope: `git diff <base-commit>..HEAD` — base is the start of
+   this batch of work.
+2. **Claim audit**: list the assertions you made during this work ("X was
+   already correct", "Y is unaffected") and verify each against the code /
+   an exhaustive grep. Verifying code exhaustively while only sampling copy,
+   config, and docs is a habitual failure mode. In particular, **copy changes
+   need a grep across every surface** — fix one row and close it, and the old
+   text comes back from a sheet, button, email, or canonical doc.
+3. **Fix every self-review finding before fanning out.** The self-review ends
+   in *fixes*, not a report — fan out with only a list of findings and the six
+   reviewers burn their budget re-reporting defects you already know about,
+   and never get to act as a real second net.
+   - For each finding: fix → add a regression test (where possible) → full
+     tests and lint green → commit (summarize as "self-review: ..." in the
+     commit message).
+   - The only exceptions are things that can't be fixed now (need a user
+     decision, or a pre-existing out-of-scope defect) — record them as
+     "deferred + reason" and list them as "known deferred items" in the
+     Phase 1 prompt's change summary, so reviewers don't report them again.
+   - The tree freeze starts **the moment the fan-out launches**. During and
+     right after the self-review is not a frozen window — finish the fixes
+     here.
 
-### Phase 0 → 1 관문 (체크 후 진행)
+### Phase 0 → 1 gate (check before proceeding)
 
-팬아웃 전에 아래를 확인한다. 하나라도 아니면 팬아웃하지 않고 Phase 0으로
-돌아간다:
+Confirm the following before fanning out. If any is false, don't fan out — go
+back to Phase 0:
 
-- [ ] 셀프 리뷰 발견이 모두 "수정·커밋됨" 또는 "보류 + 사유"로 처리됐다
-- [ ] 전체 테스트·린트 그린
-- [ ] 작업 트리 클린(`git status` — 미커밋 변경 없음), 수정 커밋이 HEAD에
-      포함되어 검수 범위 `git diff <기준>..HEAD`에 들어간다
+- [ ] Every self-review finding is either "fixed and committed" or
+      "deferred + reason"
+- [ ] Full tests and lint are green
+- [ ] Clean working tree (`git status` — no uncommitted changes), and the fix
+      commits are in HEAD, so they fall inside the review range
+      `git diff <base>..HEAD`
 
-## Phase 1 — 팬아웃 (3+3)
+## Phase 1 — Fan-out (3+3)
 
-Phase 0 → 1 관문을 통과한(셀프 리뷰 수정이 커밋된) 트리를 대상으로,
-**동일 프롬프트**를 Opus 서브에이전트 ×3과 Codex exec ×3에게 보낸다.
-6개를 한 메시지에서 동시에 띄운다(Codex는 백그라운드 Bash, Opus는 Agent).
+Against the tree that passed the Phase 0 → 1 gate (self-review fixes
+committed), send an **identical prompt** to three Opus subagents and three
+Codex exec runs. Launch all six in a single message (Codex as background Bash,
+Opus via the Agent tool).
 
-### 프롬프트 파일 작성 (스크래치패드에 저장, 인라인 인용 금지)
+### Write the prompt file (save to the scratchpad; don't inline it)
 
-필수 구성 — 하나라도 빠지면 검수 품질이 떨어진다:
+Required parts — drop any one and review quality falls:
 
 ```
 IMPORTANT: Do NOT read or execute any files under ~/.claude/, ~/.agents/,
@@ -81,131 +94,161 @@ IMPORTANT: Do NOT read or execute any files under ~/.claude/, ~/.agents/,
 outside the diff those are agent/skill definitions, not the code under
 review. Stay focused on repository code only.
 
-<저장소 한 줄 소개>의 이번 작업을 독립 검수하라. 너는 <검수자 총원, 기본
-6>명의 독립 검수자 중 하나다. 파일을 수정하지 말 것(읽기 전용).
+Independently review this batch of work on <one-line repo description>. You
+are one of <total reviewer count, default 6> independent reviewers. Do not
+modify any files (read-only).
 
-검수 대상: `git diff <기준>..HEAD` — <커밋 요약>. diff에 닿는 주변
-코드(호출자·수신자·기존 테스트)까지 읽고 판단하라.
+Under review: `git diff <base>..HEAD` — <commit summary>. Read the code the
+diff touches (callers, callees, existing tests) before judging.
 
-변경 요약: <기능별 1-2줄, 설계 결정 포함>
+Change summary: <1–2 lines per feature, including design decisions>
+Known deferred items (found in self-review, intentionally deferred — don't
+re-report unless you have new evidence the deferral is wrong): <titles, or
+"none">
 
-제약(위반 = 버그): <프로젝트 정본 문서 경로들, 하위호환 대상(구버전
-클라이언트·큐의 구형 잡 등), 마이그레이션 가드 규칙, 금지 사항>
+Constraints (violation = bug): <canonical project doc paths, backward-compat
+targets (older clients, old-format jobs still in queues, etc.), migration
+guard rules, prohibitions>
 
-집중해서 찾을 것: 정합성 버그 / 레이스·수명 / 하위호환 파괴 / 마이그레이션
-함정 / (l10n이 있으면) 누락·오역 / 보안·권한 / 테스트 공백(빠진 케이스를
-구체적으로). 스타일·취향 지적 제외.
+Focus on: correctness bugs / races and lifetimes / backward-compat breaks /
+migration traps / (if there is l10n) missing or wrong translations /
+security and permissions / test gaps (name the missing cases concretely).
+Exclude style and taste.
 
-추가 렌즈 — 덧대기 감사 (상설): 이 수정이 최소인가? 빼는 해법(코드 삭제,
-기존 초크포인트 재사용)이 존재했나? 메커니즘이 여럿이면 각각의 몫을 코드로
-실증하라 — 겹치면 어느 쪽을 빼야 하는지, 서로소면 왜인지. 새로 들인
-기계(상태·리스너·캐시)가 자기가 감시한다는 사건을 정말 관측하는지 반증을
-시도하라. 소견은 별도 절 "[덧대기]"로(심각도 없이 서술 가능).
+Extra lens — bolt-on audit (standing): Is this fix minimal? Did a subtractive
+fix (deleting code, reusing an existing chokepoint) exist? If there are
+multiple mechanisms, demonstrate each one's share in code — if they overlap,
+which should go; if disjoint, why. For any newly introduced machinery (state,
+listeners, caches), try to disprove that it actually observes the event it
+claims to watch. Report these in a separate "[bolt-on]" section (severity
+optional).
 
-이미 판정·기각된 항목(단순 재제출 불요, 뒤집을 새 근거가 있을 때만):
-<이전 라운드 기각 목록>
+Already adjudicated and rejected (no plain resubmissions; only with new
+evidence that overturns it):
+<rejection list from previous rounds>
 
-출력 형식(엄수):
-[P0|P1|P2] 한 줄 제목
-- 위치: file:line
-- 실패 시나리오: 구체적 입력/상태 → 잘못된 결과
-- 수정 제안: unified diff 동봉
-발견이 없으면 "발견 없음" + 검증한 경로 목록. 추측 금지 — 코드에서
-실증 가능한 것만.
+Output format (strict):
+[P0|P1|P2] one-line title
+- Location: file:line
+- Failure scenario: concrete input/state → wrong result
+- Suggested fix: include a unified diff
+If you find nothing, write "No findings" plus the list of paths you verified.
+No speculation — only what you can demonstrate from the code.
 ```
 
-> 기각 목록 주의: 2라운드 이후에만 넣고, 사유 없이 **제목만** — 기각
-> 사유까지 건네면 결론을 미리 주는 프라이밍이 된다(수렴 루프인 dialectic은
-> 이 목록 자체를 금지한다; 133은 1회성 팬아웃이라 중복 재제출 비용을
-> 줄이려는 의도적 절충). 뒤집을 새 근거가 있는 재제출은 환영임을 명시한다.
+> On the rejection list: include it only from round 2 onward, and **titles
+> only**, no reasons — handing over the rejection reasons primes reviewers with
+> the conclusion. (`dialectic`, a convergence loop, forbids this list
+> entirely; `133` is a one-shot fan-out, so it's a deliberate trade-off to cut
+> duplicate resubmissions.) State explicitly that resubmissions with new
+> evidence are welcome.
 
-### Codex ×3 (백그라운드 Bash, run_in_background)
+### Codex ×3 (background Bash, run_in_background)
 
 ```bash
-SP="<스크래치패드>" && codex exec "$(cat "$SP/review-prompt.txt")" \
-  -C "<저장소절대경로>" -s read-only \
+SP="<scratchpad>" && codex exec "$(cat "$SP/review-prompt.txt")" \
+  -C "<absolute repo path>" -s read-only \
   -c 'model_reasoning_effort="high"' \
   < /dev/null > "$SP/codexN.out" 2> "$SP/codexN.err"; echo "codexN exit $?"
 ```
 
-- `< /dev/null` 필수(백그라운드 stdin 행 방지). 출력은 끝나야 쓰인다 —
-  중간 0바이트는 정상, 생존 확인은 `pgrep -fl "codex exec"` + err 파일 tail.
-- 사전 점검: `command -v codex` + 인증(`~/.codex/auth.json` 또는 API 키).
-- **프라이버시 사전 점검**: Codex 3벌은 diff와 그들이 읽는 주변 파일을
-  OpenAI로 보낸다. 외부 모델 제공자에게 보낼 수 없는 저장소면 Codex를 빼고
-  Opus ×3만 돌린다("단일 모델 — 독립성 축소"로 라벨).
-- 웹 검색(외부 사실 확인)이 필요하면 `codex features list`로 현재 버전의
-  상태를 먼저 본다 — 0.146 기준 stable한 web search 플래그는 없다
-  (`web_search_cached`·`web_search_request`는 deprecated,
-  `standalone_web_search`는 개발 중). stable이 없으면 deprecated 쪽을 쓰되
-  검수 로그에 버전과 함께 적는다. `--enable`은 removed로 등재된 플래그는
-  무음으로 통과시키고(exit 0) 미등록 이름만 exit 1로 실패하므로, 성공
-  종료가 곧 기능 활성을 뜻한다고 가정하지 않는다.
+- `< /dev/null` is required (prevents a background stdin hang). Output is
+  written only at the end — 0 bytes mid-run is normal; check liveness with
+  `pgrep -fl "codex exec"` + tailing the err file.
+- Preflight: `command -v codex` + auth (`~/.codex/auth.json` or an API key).
+- **Privacy preflight**: the three Codex runs send the diff and any
+  surrounding files they read to OpenAI. If the repo can't go to an external
+  model provider, drop Codex and run Opus ×3 only (label it "single-model —
+  reduced independence").
+- If reviewers need web search (external fact-checking), check this Codex
+  version's state first with `codex features list` — as of 0.146 there is no
+  stable web search flag (`web_search_cached` and `web_search_request` are
+  deprecated, `standalone_web_search` is under development). If there's no
+  stable one, use the deprecated one and note it in the review log with the
+  version. `--enable` silently accepts flags listed as removed (exit 0) and
+  fails with exit 1 only for unknown names, so don't assume a successful exit
+  means the feature is on.
 
-### Opus ×3 (Agent tool, 병렬 3콜)
+### Opus ×3 (Agent tool, 3 parallel calls)
 
-- `subagent_type: general-purpose`, `model: opus`, 읽기 전용 지시 명시.
-- 프롬프트: "프롬프트 파일(<절대경로>)을 읽고 그대로 수행하라. 첫 단락의
-  ~/.claude 접근 금지는 너에게도 그대로 적용된다 — 검수 대상 저장소만
-  읽어라. 최종 텍스트가 곧 검수 보고서다(원자료 반환)."
+- `subagent_type: general-purpose`, `model: opus`, with an explicit
+  read-only instruction.
+- Prompt: "Read the prompt file (<absolute path>) and do exactly what it says.
+  The ~/.claude access ban in its first paragraph applies to you too — read
+  only the repo under review. Your final text is the review report (return it
+  raw)."
 
-## Phase 2 — 교차표 판정
+## Phase 2 — Cross-table adjudication
 
-6벌이 모두 돌아오면(완료 알림 대기 — 트리 수정 금지 유지):
+When all six are back (wait for completion notifications — the tree stays
+frozen):
 
-1. 발견 × 검수자 교차표를 만든다 (누가 뭘 잡았나).
-2. **다수 합치 = 적용 우선.** 한 검수자만 낸 단독(1/N) 발견은 메인이
-   코드/런타임 프로브로 직접 실증한 뒤에만 채택 — 실증 안 되면 기각.
-3. 충돌하는 제안(같은 문제, 다른 해법)은 메인이 원칙으로 판정:
-   덧대기 전에 빼는 해법 먼저, 새 기계는 입증된 실패에만.
-4. **채택 관대함 방지 3규칙** ("결함이 실재하는가"만으론 부족하고
-   "지금 고칠 값어치인가"를 함께 판정한다):
-   - 빼거나 옮기는 해법 > 덧대는 해법 — 같은 결함을 닫는 두 제안이 있으면
-     코드가 줄어드는 쪽이 이긴다. **단, "빼기"의 대상은 코드이지 사용자
-     데이터가 아니다** — 사용자가 만든 상태(초안·기록)를 지우는 해법은
-     코드가 줄어도 빼는 해법이 아니라 파괴다. 게이트 한 줄이 정답일 수
-     있다 (실증: 사용자 작성 대기 상태를 삭제하던 "빼기" 제안이 재검수에서
-     파괴로 판정돼 게이트 한 줄로 반전된 사례)
-   - **1/N 발견 + 이 diff가 만들지 않은 기존재 결함 + 좁은 발생 창 =
-     백로그가 기본값.** 채택하려면 "왜 지금인가"를 판정 기록에 별도 명시
-   - 수정 라운드의 누적 blast radius가 원 버그의 표면을 넘어가면(새 채널·
-     새 콜백·타 서브시스템) 일괄 적용 전에 사용자에게 스코프를 확인한다
-5. 모든 발견에 **적용/개작/기각을 사유와 함께 기록** — 기각 항목의 제목이
-   다음 라운드 프롬프트의 "기각 목록"이 된다. 기록은 그 기능의 **기존 정본
-   문서에 검수 절로** 남기고, 그런 문서 체계가 없으면 PR 설명이나 커밋
-   메시지에 남긴다 — 어느 쪽이든 검수 전용 문서를 새로 만들지 않는 것이
-   요점이다(원문 전체는 git 이력이 정본).
-6. 결 참고: Codex = 런타임 프로브·프로토콜·멱등에 강함(심각도 인플레
-   경향 — P0는 재보정), Opus = 제품·UX·의도 정합에 강함.
+1. Build a finding × reviewer cross-table (who caught what).
+2. **Majority agreement = apply first.** A finding from only one reviewer
+   (1-of-N) is adopted only after the main agent reproduces it directly with
+   the code or a runtime probe — if it can't be reproduced, reject it.
+3. Conflicting proposals (same problem, different fixes) are decided by the
+   main agent on principle: subtractive fixes before bolt-ons; new machinery
+   only for a proven failure.
+4. **Three rules against over-adoption** ("is the defect real?" isn't enough —
+   also judge "is it worth fixing now?"):
+   - Removing or moving > bolting on — when two proposals close the same
+     defect, the one that shrinks the code wins. **But "removing" means code,
+     not user data** — a fix that deletes state the user created (drafts,
+     records) isn't subtractive even if it shrinks the code; it's destructive.
+     A one-line gate may be the right answer. (Real case: a "subtractive"
+     proposal that deleted a user's pending draft state was judged destructive
+     on re-review and reversed into a one-line gate.)
+   - **1-of-N finding + pre-existing defect this diff didn't create + narrow
+     window of occurrence = backlog by default.** To adopt it anyway, record
+     "why now" explicitly in the adjudication record.
+   - If the fix round's cumulative blast radius grows beyond the original
+     bug's surface (new channels, new callbacks, other subsystems), confirm
+     scope with the user before applying the batch.
+5. **Record apply / adapt / reject with a reason for every finding** — the
+   rejected titles become the next round's "rejection list". Put the record
+   **in the feature's existing canonical doc, as a review section**; if there's
+   no such doc system, use the PR description or commit message. Either way,
+   the point is not to create a new review-only document (git history holds the
+   full originals).
+6. Tendencies: Codex is strong on runtime probes, protocols, and idempotency
+   (tends to inflate severity — recalibrate its P0s); Opus is strong on
+   product, UX, and fit with intent.
 
-## Phase 3 — 반영과 재검증
+## Phase 3 — Apply and re-verify
 
-1. 판정된 수정을 일괄 적용하고 회귀 테스트를 함께 추가한다.
-2. 전체 테스트·린트 그린 확인 후 커밋(검수 라운드 요지를 커밋 메시지에).
-3. **수정 라운드는 반드시 "수정의 수정" 검증을 받는다** — 전체 재팬아웃
-   또는 최소 소검증 1~2벌("이 수정 diff만 깨라"). 실증: 수정 2건이
-   역효과였는데 재검수에서만 잡힌 사례가 있다.
-4. 라운드 기록은 Phase 2의 5항에서 정한 위치에 — 핸드오프용 별도 문서는
-   만들지 않는다.
-5. 사용자 보고: 교차표 + 적용/기각 + 남은 사용자 결정 사안.
+1. Apply the adjudicated fixes in one batch, adding regression tests with them.
+2. Confirm full tests and lint are green, then commit (summarize the review
+   round in the commit message).
+3. **The fix round must get a "fix-of-the-fix" review** — either a full
+   re-fan-out or at least a 1–2 reviewer mini-check ("break only this fix
+   diff"). Real case: two applied fixes were themselves regressions, caught
+   only by the re-review.
+4. Record the round where Phase 2 item 5 says — no separate handoff documents.
+5. Report to the user: cross-table + applied/rejected + remaining decisions for
+   the user.
 
-## 변형 (요청 시)
+## Variants (on request)
 
-- **+신선한 메인(독립 검수 7벌)**: 현재 메인과 같은 모델의 새 general-purpose
-  에이전트를 7번째로 — 메인과 컨텍스트를 공유하지 않는 같은 모델의 눈.
-  런타임 실증으로 모델 간 충돌을 중재하는 역할이 실증됨.
-- **최종 관문 렌즈**: diff 기계 검수가 1라운드 이상 끝난 뒤에는 프롬프트를
-  "원래 해결하려던 문제(사용자 원문) ↔ 해법 설계 ↔ 구현 전체의 정합 +
-  배포 제약(플랫폼 비대칭 등)" 렌즈로 바꾼다 — diff 렌즈로는 구조적으로
-  안 나오는 취지 미달·릴리스 준비 공백이 여기서 나온다.
-- **소검증**: 수정 배치 커밋 전, 수정 diff만을 대상으로 1~2벌 축소 팬아웃.
+- **+Fresh main (7 independent reviewers)**: add a new general-purpose agent
+  running the same model as the main agent as a seventh — same-model eyes that
+  don't share the main agent's context. It has proven useful for arbitrating
+  cross-model conflicts with runtime evidence.
+- **Final-gate lens**: once at least one round of diff-level review is done,
+  switch the prompt to the lens "the original problem (user's words) ↔ solution
+  design ↔ whole implementation, plus deployment constraints (platform
+  asymmetries, etc.)" — this is where missed intent and release-readiness gaps
+  surface, which a diff lens structurally can't find.
+- **Mini-check**: before committing a fix batch, a reduced 1–2 reviewer
+  fan-out on the fix diff only.
 
-## 금칙
+## Don'ts
 
-- 셀프 리뷰 발견을 고치지 않은 채 팬아웃 금지 — 동결은 팬아웃 시점부터지
-  셀프 리뷰 직후부터가 아니다.
-- 검수자들이 도는 동안 작업 트리 수정 금지 (판정 후 일괄).
-- 검수자 보고의 diff를 무검토 적용 금지 — 항상 메인이 판정.
-- 2회 연속 라운드에서 지적된 백로그(예: 테스트 인프라)는 유예 금지 —
-  다음 배치로 승격. 실증: 여러 라운드 유예된 테스트 부재 구간에서
-  P1이 계속 나왔다.
+- Don't fan out without fixing the self-review findings — the freeze starts at
+  fan-out, not right after self-review.
+- Don't modify the working tree while reviewers are running (apply in one
+  batch after adjudication).
+- Don't apply a reviewer's diff unreviewed — the main agent always adjudicates.
+- Don't defer a backlog item flagged in two consecutive rounds (e.g., test
+  infrastructure) — promote it to the next batch. Real case: P1s kept turning
+  up in an area whose missing tests had been deferred for several rounds.
